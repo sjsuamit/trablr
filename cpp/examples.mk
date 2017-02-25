@@ -1,6 +1,7 @@
 SOURCES = $(PROG).cpp mongoose.c
-INC = ${HOME}/curl-7.53.0/include/
-CFLAGS = -g -W -Wall -Werror -I$(INC) -Wno-unused-function $(CFLAGS_EXTRA) $(MODULE_CFLAGS)
+INC = -I${HOME}/curl-7.53.0/include/
+INC += -I${HOME}/rapidjson/include/
+CFLAGS = -g -W -Wall -Werror $(INC) -Wno-unused-function $(CFLAGS_EXTRA) $(MODULE_CFLAGS)
 
 all: $(PROG)
 

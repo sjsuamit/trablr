@@ -1,14 +1,14 @@
-// Copyright (c) 2015 Cesanta Software Limited
-// All rights reserved
-
 #include <iostream>
 #include <string>
 #include <stdio.h>
-#include "mongoose.h"
 #include <curl/curl.h>
 #include <curl/easy.h>
+#include "mongoose.h"
+#include "rapidjson/prettywriter.h"
+#include "rapidjson/document.h"
 
 using namespace std;
+using namespace rapidjson;
 
 static const char *s_http_port = "8000";
 static struct mg_serve_http_opts s_http_server_opts;
@@ -18,85 +18,139 @@ static const struct mg_str s_get_method = MG_MK_STR("GET");
 static const struct mg_str s_put_method = MG_MK_STR("PUT");
 static const struct mg_str s_delete_method = MG_MK_STR("DELETE");
 
-string data;
+static const string host_name = "http://api.511.org";
+static const string api_key = "876be52b-5ed7-46bf-bfe9-43443887b34a";
+static const string format = "JSON";
+static string API_RESPONSE_JSON;
 
-size_t writeCallback(char* buf, int size, int nmemb)
-{ //callback must have this declaration
-    //buf is a pointer to the data that curl has for us
-    //size*nmemb is the size of the buffer
+// static size_t writeCallback(void *contents, size_t size, size_t nmemb, void *userp) {
+//     ((std::string*)userp)->append((char*)contents, size * nmemb);
+//     return size * nmemb;
+// }
 
-    for (int c = 0; c<size*nmemb; c++)
-    {
-        data.push_back(buf[c]);
+static size_t writeCallback(char* buff, size_t size, size_t nmemb) {
+    for (size_t c = 0; c < size*nmemb; c++) {
+        if (static_cast<int>(buff[c]) >= 0)
+            API_RESPONSE_JSON.push_back(buff[c]);
     }
-    return size*nmemb; //tell curl how many bytes we handled
+    return size*nmemb;
 }
 
-static void get511ApiResponse(struct mg_connection *nc, struct http_message *hm) {
-    char n1[100];
-    double result = 0;
-    mg_get_http_var(&hm->body, "n1", n1, sizeof(n1));
-
+static void performCurl(string ApiUrl) {
     CURL *curl;
     CURLcode res;
 
     curl = curl_easy_init();
     if(curl) {
-        curl_easy_setopt(curl, CURLOPT_URL, "http://api.511.org/transit/lines?api_key=876be52b-5ed7-46bf-bfe9-43443887b34a&operator_id=VTA&format=JSON");
-        // curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
-        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, &writeCallback);
-        curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
-
-        res = curl_easy_perform(curl);
-        if(res != CURLE_OK)
-            fprintf(stderr, "curl_easy_perform() failed: %s\n", curl_easy_strerror(res));
-
-        cout << endl << data << endl;
-        printf("%s\n", data.c_str());
-
-        curl_easy_cleanup(curl);        
-    }
-
-    /* Compute the result and send it back as a JSON object */
-    mg_printf_http_chunk(nc, "{ \"result\": %lf }", result);
-    mg_send_http_chunk(nc, "", 0); /* Send empty chunk, the end of response */
-}
-
-static void get511ApiResponse2(struct mg_connection *nc, struct http_message *hm) {
-    CURL *curl;
-    CURLcode res;
-    char s[100000];
-    string ApiUrl = "http://api.511.org/transit/lines?api_key=876be52b-5ed7-46bf-bfe9-43443887b34a&operator_id=VTA&format=JSON";
-    
-    char n1[100];
-    double result = 0;
-    mg_get_http_var(&hm->body, "n1", n1, sizeof(n1));
-
-    curl = curl_easy_init();
-    if(curl) {
-        // curl_easy_setopt(curl, CURLOPT_URL, ApiUrl.toString());
-        curl_easy_setopt(curl, CURLOPT_URL, "http://api.511.org/transit/lines?api_key=876be52b-5ed7-46bf-bfe9-43443887b34a&operator_id=VTA&format=JSON");
-        /* example.com is redirected, so we tell libcurl to follow redirection */ 
+        curl_easy_setopt(curl, CURLOPT_URL, ApiUrl.c_str());
+        curl_easy_setopt(curl, CURLOPT_ACCEPT_ENCODING, "");
         curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
-        curl_easy_setopt(curl, CURLOPT_WRITEDATA, &s);
-        // curl_easy_setopt (curl, CURLOPT_VERBOSE, 1L);
+        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, &writeCallback);
+        // curl_easy_setopt(curl, CURLOPT_WRITEDATA, &API_RESPONSE_JSON);
 
-        /* Perform the request, res will get the return code */ 
         res = curl_easy_perform(curl);
-        /* Check for errors */
         if(res != CURLE_OK)
             fprintf(stderr, "curl_easy_perform() failed: %s\n", curl_easy_strerror(res));
 
-        /* always cleanup */
         curl_easy_cleanup(curl);
+    }
+}
 
-        printf("%s\n", s);
-        // cout << s << endl;
+static void get511ApiTransitOperators(struct mg_connection *nc) {
+    string api_prefix = "/transit/operators";
+    string API_REQUEST_URL = host_name + api_prefix \
+                            + "?api_key=" + api_key \
+                            + "&format=" + format;
+
+    API_RESPONSE_JSON.clear();
+    performCurl(API_REQUEST_URL);
+
+    Document document;
+    if (document.Parse<0>(API_RESPONSE_JSON.c_str()).HasParseError()) {
+        fprintf(stderr, "JSON Parsing error\n");
+    }
+
+    assert(document.IsArray());
+    for (SizeType i = 0; i < document.Size(); i++) {
+        assert(document[SizeType(i)].IsObject());
+        const Value& temp = document[SizeType(i)];
+        StringBuffer buffer;
+        Writer<StringBuffer> writer(buffer);
+        temp.Accept(writer);
+        cout << buffer.GetString() << endl;
     }
 
     /* Compute the result and send it back as a JSON object */
-    mg_printf_http_chunk(nc, "{ \"result\": %lf }", result);
-    mg_send_http_chunk(nc, "", 0); /* Send empty chunk, the end of response */
+    mg_printf(nc, "%s", "HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n");
+    mg_printf_http_chunk(nc, "{ \"result\": %d }", 99);
+    mg_send_http_chunk(nc, "", 0);
+}
+
+static void get511ApiTransitLines(struct mg_connection *nc) {
+    string api_prefix = "/transit/lines";
+    string operator_id = "VTA";
+    string API_REQUEST_URL = host_name + api_prefix \
+                            + "?api_key=" + api_key \
+                            + "&operator_id=" + operator_id \
+                            + "&format=" + format;
+
+    API_RESPONSE_JSON.clear();
+    performCurl(API_REQUEST_URL);
+
+    Document document;
+    if (document.Parse<0>(API_RESPONSE_JSON.c_str()).HasParseError()) {
+        fprintf(stderr, "JSON Parsing error\n");
+    }
+    assert(document.IsArray());
+    for (SizeType i = 0; i < document.Size(); i++) {
+        assert(document[SizeType(i)].IsObject());
+        const Value& temp = document[SizeType(i)];
+        StringBuffer buffer;
+        Writer<StringBuffer> writer(buffer);
+        temp.Accept(writer);
+        cout << buffer.GetString() << endl;
+    }
+
+    /* Compute the result and send it back as a JSON object */
+    mg_printf(nc, "%s", "HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n");
+    mg_printf_http_chunk(nc, "{ \"result\": %d }", 99);
+    mg_send_http_chunk(nc, "", 0);
+}
+
+static void get511ApiTransitStops(struct mg_connection *nc) {
+    string api_prefix = "/transit/stops";
+    string operator_id = "VTA";
+    string API_REQUEST_URL = host_name + api_prefix \
+                            + "?api_key=" + api_key \
+                            + "&operator_id=" + operator_id \
+                            + "&format=" + format;
+
+    API_RESPONSE_JSON.clear();
+    performCurl(API_REQUEST_URL);
+
+    Document document;
+    if (document.Parse<0>(API_RESPONSE_JSON.c_str()).HasParseError()) {
+        fprintf(stderr, "JSON Parsing error\n");
+    }
+    assert(document.IsObject());
+    assert(document.HasMember("Contents"));
+    assert(document["Contents"].HasMember("dataObjects"));
+    assert(document["Contents"]["dataObjects"].HasMember("ScheduledStopPoint"));
+    const Value& stops = document["Contents"]["dataObjects"]["ScheduledStopPoint"];
+    assert(stops.IsArray());
+    for (SizeType i = 0; i < stops.Size(); i++) {
+        assert(stops[SizeType(i)].IsObject());
+        const Value& temp = stops[SizeType(i)];
+        StringBuffer buffer;
+        Writer<StringBuffer> writer(buffer);
+        temp.Accept(writer);
+        cout << buffer.GetString() << endl;
+    }
+
+    /* Compute the result and send it back as a JSON object */
+    mg_printf(nc, "%s", "HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n");
+    mg_printf_http_chunk(nc, "{ \"result\": %d }", 99);
+    mg_send_http_chunk(nc, "", 0);
 }
 
 static void handle_sum_call(struct mg_connection *nc, struct http_message *hm) {
@@ -142,7 +196,8 @@ static void ev_handler(struct mg_connection *nc, int ev, void *ev_data) {
                 // key.p = hm->uri.p + api_prefix.len;
                 // key.len = hm->uri.len - api_prefix.len;
                if (is_equal(&hm->method, &s_get_method)) {
-                    get511ApiResponse(nc, hm);
+                    // get511ApiTransitLines(nc);
+                    get511ApiTransitStops(nc);
                     mg_printf(nc, "%s", "get_method\r\n");
                     printf("get_method\n");
                 } 
@@ -157,7 +212,7 @@ static void ev_handler(struct mg_connection *nc, int ev, void *ev_data) {
                 //     printf("delete_method\n");
                 // }
                 else if (is_equal(&hm->method, &s_post_method)) {
-                    handle_sum_call(nc, hm); /* Handle RESTful call */
+                    get511ApiTransitOperators(nc);
                     mg_printf(nc, "%s", "post_method\r\n");
                     printf("post_method\n");
                 } else {

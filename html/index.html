@@ -22,6 +22,17 @@
         }
       });
     });
+    /* $(document).on('click', '#getclick', function() {
+      $.ajax({
+        url: 'http://127.0.0.1:8000/api/v1/sum',
+        method: 'GET',
+        dataType: 'json',
+        data: { n1: $('#n1').val(), n2: $('#n2').val() },
+        success: function(json) {
+          $('#result').html(json.result);
+        }
+      });
+    });*/
   });
 </script>
 <style>
@@ -73,7 +84,7 @@ body,h1,h2,h3,h4,h5,h6 {font-family: "Raleway", Arial, Helvetica, sans-serif}
       <input class="w3-input w3-border" type="text" id="testdata" placeholder="Test data">
       <p>
           <button class="w3-btn w3-dark-grey" onclick="testAPI('POST');">POST</button>
-          <button class="w3-btn w3-dark-grey" onclick="testAPI('GET');">GET</button>
+          <button class="w3-btn w3-dark-grey" id="getclick" onclick="testAPI('GET');">GET</button>
           <!-- <button class="w3-btn w3-dark-grey" onclick="testAPI('PUT');">PUT</button>
           <button class="w3-btn w3-dark-grey" onclick="testAPI('DELETE');">DELETE</button> -->
       </p>
