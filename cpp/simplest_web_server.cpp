@@ -58,8 +58,8 @@ static void performCurl(string ApiUrl) {
 
 static void get511ApiTransitOperators(struct mg_connection *nc) {
     string api_prefix = "/transit/operators";
-    string API_REQUEST_URL = host_name + api_prefix \
-                            + "?api_key=" + api_key \
+    string API_REQUEST_URL = host_name + api_prefix
+                            + "?api_key=" + api_key
                             + "&format=" + format;
 
     API_RESPONSE_JSON.clear();
@@ -89,9 +89,9 @@ static void get511ApiTransitOperators(struct mg_connection *nc) {
 static void get511ApiTransitLines(struct mg_connection *nc) {
     string api_prefix = "/transit/lines";
     string operator_id = "VTA";
-    string API_REQUEST_URL = host_name + api_prefix \
-                            + "?api_key=" + api_key \
-                            + "&operator_id=" + operator_id \
+    string API_REQUEST_URL = host_name + api_prefix
+                            + "?api_key=" + api_key
+                            + "&operator_id=" + operator_id
                             + "&format=" + format;
 
     API_RESPONSE_JSON.clear();
@@ -120,9 +120,9 @@ static void get511ApiTransitLines(struct mg_connection *nc) {
 static void get511ApiTransitStops(struct mg_connection *nc) {
     string api_prefix = "/transit/stops";
     string operator_id = "VTA";
-    string API_REQUEST_URL = host_name + api_prefix \
-                            + "?api_key=" + api_key \
-                            + "&operator_id=" + operator_id \
+    string API_REQUEST_URL = host_name + api_prefix
+                            + "?api_key=" + api_key
+                            + "&operator_id=" + operator_id
                             + "&format=" + format;
 
     API_RESPONSE_JSON.clear();
@@ -151,6 +151,183 @@ static void get511ApiTransitStops(struct mg_connection *nc) {
     mg_printf(nc, "%s", "HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n");
     mg_printf_http_chunk(nc, "{ \"result\": %d }", 99);
     mg_send_http_chunk(nc, "", 0);
+}
+
+static void get511ApiTransitStopPlaces(struct mg_connection *nc) {
+    string api_prefix = "/transit/stopPlaces";
+    string operator_id = "VTA";
+    string stop_id = "60824";
+    string API_REQUEST_URL = host_name + api_prefix
+                            + "?api_key=" + api_key
+                            + "&operator_id=" + operator_id
+                            + "&stop_id=" + stop_id
+                            + "&format=" + format;
+
+    API_RESPONSE_JSON.clear();
+    performCurl(API_REQUEST_URL);
+
+    Document document;
+    if (document.Parse<0>(API_RESPONSE_JSON.c_str()).HasParseError()) {
+        fprintf(stderr, "JSON Parsing error\n");
+    }
+    assert(document.IsObject());
+    assert(document.HasMember("Siri"));
+    assert(document["Siri"].HasMember("ServiceDelivery"));
+    assert(document["Siri"]["ServiceDelivery"].HasMember("DataObjectDelivery"));
+    assert(document["Siri"]["ServiceDelivery"]["DataObjectDelivery"].HasMember("dataObjects"));
+    assert(document["Siri"]["ServiceDelivery"]["DataObjectDelivery"]["dataObjects"].HasMember("SiteFrame"));
+    assert(document["Siri"]["ServiceDelivery"]["DataObjectDelivery"]["dataObjects"]["SiteFrame"].HasMember("stopPlaces"));
+    assert(document["Siri"]["ServiceDelivery"]["DataObjectDelivery"]["dataObjects"]["SiteFrame"]["stopPlaces"].HasMember("StopPlace"));
+    assert(document["Siri"]["ServiceDelivery"]["DataObjectDelivery"]["dataObjects"]["SiteFrame"]["stopPlaces"]["StopPlace"].HasMember("Centroid"));
+    assert(document["Siri"]["ServiceDelivery"]["DataObjectDelivery"]["dataObjects"]["SiteFrame"]["stopPlaces"]["StopPlace"]["Centroid"].HasMember("Location"));
+    assert(document["Siri"]["ServiceDelivery"]["DataObjectDelivery"]["dataObjects"]["SiteFrame"]["stopPlaces"]["StopPlace"]["Centroid"]["Location"].HasMember("Longitude"));
+    assert(document["Siri"]["ServiceDelivery"]["DataObjectDelivery"]["dataObjects"]["SiteFrame"]["stopPlaces"]["StopPlace"]["Centroid"]["Location"].HasMember("Latitude"));
+    const Value& longitude = document["Siri"]["ServiceDelivery"]["DataObjectDelivery"]["dataObjects"]["SiteFrame"]["stopPlaces"]["StopPlace"]["Centroid"]["Location"]["Longitude"];
+    const Value& latitude = document["Siri"]["ServiceDelivery"]["DataObjectDelivery"]["dataObjects"]["SiteFrame"]["stopPlaces"]["StopPlace"]["Centroid"]["Location"]["Latitude"];
+    assert(longitude.IsString());
+    assert(latitude.IsString());
+    cout << "Longitude : " << longitude.GetString() << endl;
+    cout << "Latitude : " << latitude.GetString() << endl;
+
+    /* Compute the result and send it back as a JSON object */
+    mg_printf(nc, "%s", "HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n");
+    mg_printf_http_chunk(nc, "{ \"result\": %d }", 99);
+    mg_send_http_chunk(nc, "", 0);
+}
+
+static void get511ApiTransitStopMonitoring(struct mg_connection *nc) {
+    string api_prefix = "/transit/StopMonitoring";
+    string agency = "VTA";
+    string stopCode = "60824";
+    // string stopCode = "62744";
+    string API_REQUEST_URL = host_name + api_prefix
+                            + "?api_key=" + api_key
+                            + "&agency=" + agency
+                            + "&stopCode=" + stopCode
+                            + "&format=" + format;
+
+    API_RESPONSE_JSON.clear();
+    performCurl(API_REQUEST_URL);
+
+    Document document;
+    if (document.Parse<0>(API_RESPONSE_JSON.c_str()).HasParseError()) {
+        fprintf(stderr, "JSON Parsing error\n");
+    }
+    assert(document.IsObject());
+    assert(document.HasMember("ServiceDelivery"));
+    assert(document["ServiceDelivery"].HasMember("StopMonitoringDelivery"));
+    assert(document["ServiceDelivery"]["StopMonitoringDelivery"].HasMember("MonitoredStopVisit"));
+    const Value& stopVisit = document["ServiceDelivery"]["StopMonitoringDelivery"]["MonitoredStopVisit"];
+    assert(stopVisit.IsArray());
+    for (SizeType i = 0; i < stopVisit.Size(); i++) {
+        assert(stopVisit[SizeType(i)].IsObject());
+        const Value& temp = stopVisit[SizeType(i)];
+        StringBuffer buffer;
+        Writer<StringBuffer> writer(buffer);
+        temp.Accept(writer);
+        cout << buffer.GetString() << endl;
+    }
+
+    /* Compute the result and send it back as a JSON object */
+    mg_printf(nc, "%s", "HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n");
+    mg_printf_http_chunk(nc, "{ \"result\": %d }", 99);
+    mg_send_http_chunk(nc, "", 0);
+}
+
+static void get511ApiTransitVehicleMonitoring(struct mg_connection *nc) {
+    string api_prefix = "/transit/VehicleMonitoring";
+    string agency = "VTA";
+    string vehicleID = "60824";
+    // string vehicleID = "62744";
+    // string vehicleID = "60519";
+    string API_REQUEST_URL = host_name + api_prefix
+                            + "?api_key=" + api_key
+                            + "&agency=" + agency
+                            // + "&vehicleID=" + vehicleID
+                            + "&format=" + format;
+
+    API_RESPONSE_JSON.clear();
+    performCurl(API_REQUEST_URL);
+
+    Document document;
+    if (document.Parse<0>(API_RESPONSE_JSON.c_str()).HasParseError()) {
+        fprintf(stderr, "JSON Parsing error\n");
+    }
+    assert(document.IsObject());
+    assert(document.HasMember("Siri"));
+    assert(document["Siri"].HasMember("ServiceDelivery"));
+    assert(document["Siri"]["ServiceDelivery"].HasMember("VehicleMonitoringDelivery"));
+    assert(document["Siri"]["ServiceDelivery"]["VehicleMonitoringDelivery"].HasMember("VehicleActivity"));
+    const Value& vehicleActivity = document["Siri"]["ServiceDelivery"]["VehicleMonitoringDelivery"]["VehicleActivity"];
+    assert(vehicleActivity.IsArray());
+    for (SizeType i = 0; i < vehicleActivity.Size(); i++) {
+        assert(vehicleActivity[SizeType(i)].IsObject());
+        const Value& temp = vehicleActivity[SizeType(i)];
+        StringBuffer buffer;
+        Writer<StringBuffer> writer(buffer);
+        temp.Accept(writer);
+        cout << buffer.GetString() << endl;
+    }
+
+    /* Compute the result and send it back as a JSON object */
+    mg_printf(nc, "%s", "HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n");
+    mg_printf_http_chunk(nc, "{ \"result\": %d }", 99);
+    mg_send_http_chunk(nc, "", 0);
+}
+
+static void get511ApiTransitTimetable(struct mg_connection *nc, struct http_message *hm) {
+    string api_prefix = "/transit/timetable";
+    string operator_id = "VTA";
+    string line_id = "60";
+    string API_REQUEST_URL = host_name + api_prefix
+                            + "?api_key=" + api_key
+                            + "&operator_id=" + operator_id
+                            + "&line_id=" + line_id
+                            + "&format=" + format;
+
+    /* Get form variables */
+    char bus1[100], start1[100], end1[100];
+    mg_get_http_var(&hm->body, "bus1", bus1, sizeof(bus1));
+    mg_get_http_var(&hm->body, "start1", start1, sizeof(start1));
+    mg_get_http_var(&hm->body, "end1", end1, sizeof(end1));
+
+    API_RESPONSE_JSON.clear();
+    performCurl(API_REQUEST_URL);
+
+    Document document;
+    if (document.Parse<0>(API_RESPONSE_JSON.c_str()).HasParseError()) {
+        fprintf(stderr, "JSON Parsing error\n");
+    }
+    assert(document.IsObject());
+    assert(document.HasMember("Content"));
+    assert(document["Content"].HasMember("TimetableFrame"));
+    const Value& timetableFrame = document["Content"]["TimetableFrame"];
+    assert(timetableFrame.IsArray());
+    for (SizeType i = 0; i < timetableFrame.Size(); i++) {
+        assert(timetableFrame[SizeType(i)].IsObject());
+        const Value& temp = timetableFrame[SizeType(i)];
+        StringBuffer buffer;
+        Writer<StringBuffer> writer(buffer);
+        temp.Accept(writer);
+        cout << buffer.GetString() << endl;
+    }
+
+    /* Compute the result and send it back as a JSON object */
+    mg_printf(nc, "%s", "HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n");
+    mg_printf_http_chunk(nc, "{ \"result\": %d }", 99);
+    mg_send_http_chunk(nc, "", 0);
+}
+
+static void loopTest(struct mg_connection *nc) {
+    int x = 98;
+    while (x < 110)
+    {
+        x++;
+        sleep(2);
+        mg_printf(nc, "%s", "HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n");
+        mg_printf_http_chunk(nc, "{ \"result\": %d }", x);
+        mg_send_http_chunk(nc, "", 0);
+    }
 }
 
 static void handle_sum_call(struct mg_connection *nc, struct http_message *hm) {
@@ -195,9 +372,15 @@ static void ev_handler(struct mg_connection *nc, int ev, void *ev_data) {
             if (has_prefix(&hm->uri, &api_prefix)) {
                 // key.p = hm->uri.p + api_prefix.len;
                 // key.len = hm->uri.len - api_prefix.len;
-               if (is_equal(&hm->method, &s_get_method)) {
+                if (mg_vcmp(&hm->uri, "/api/v1/route") == 0) {
+                    get511ApiTransitTimetable(nc, hm);
+                    cout << (string*)&hm->uri << endl;
+                    // printf("%s\n", &hm->uri);
+                }
+                else if (is_equal(&hm->method, &s_get_method)) {
                     // get511ApiTransitLines(nc);
-                    get511ApiTransitStops(nc);
+                    // get511ApiTransitStops(nc);
+                    get511ApiTransitVehicleMonitoring(nc);
                     mg_printf(nc, "%s", "get_method\r\n");
                     printf("get_method\n");
                 } 
@@ -212,7 +395,11 @@ static void ev_handler(struct mg_connection *nc, int ev, void *ev_data) {
                 //     printf("delete_method\n");
                 // }
                 else if (is_equal(&hm->method, &s_post_method)) {
-                    get511ApiTransitOperators(nc);
+                    // get511ApiTransitOperators(nc);
+                    // get511ApiTransitStopPlaces(nc);
+                    get511ApiTransitStopMonitoring(nc);
+                    // get511ApiTransitTimetable(nc);
+                    // loopTest(nc);
                     mg_printf(nc, "%s", "post_method\r\n");
                     printf("post_method\n");
                 } else {
@@ -244,11 +431,7 @@ int main(int argc, char *argv[]) {
 
     /* Parse command line arguments */
     for (i = 1; i < argc; i++) {
-        if (strcmp(argv[i], "-D") == 0) {
-            mgr.hexdump_file = argv[++i];
-        // } else if (strcmp(argv[i], "-f") == 0) {
-        //     s_db_path = argv[++i];
-        } else if (strcmp(argv[i], "-r") == 0) {
+        if (strcmp(argv[i], "-r") == 0) {
             s_http_server_opts.document_root = argv[++i];
         }
     }

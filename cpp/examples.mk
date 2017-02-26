@@ -1,9 +1,9 @@
 SOURCES = $(PROG).cpp mongoose.c
-INC = -I${HOME}/curl-7.53.0/include/
+INC = -I${HOME}/curl/include/
 INC += -I${HOME}/rapidjson/include/
 CFLAGS = -g -W -Wall -Werror $(INC) -Wno-unused-function $(CFLAGS_EXTRA) $(MODULE_CFLAGS)
 
-all: $(PROG)
+all: clean $(PROG)
 
 ifeq ($(OS), Windows_NT)
 # TODO(alashkin): enable SSL in Windows

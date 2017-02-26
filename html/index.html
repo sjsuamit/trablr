@@ -22,17 +22,19 @@
         }
       });
     });
-    /* $(document).on('click', '#getclick', function() {
+     $(document).on('click', '#route1', function() {
       $.ajax({
-        url: 'http://127.0.0.1:8000/api/v1/sum',
-        method: 'GET',
+        url: 'http://127.0.0.1:8000/api/v1/route',
+        method: 'POST',
         dataType: 'json',
-        data: { n1: $('#n1').val(), n2: $('#n2').val() },
+        data: { bus1: $('#bus1').val(), start1: $('#start1').val(), end1: $('#end1').val() },
         success: function(json) {
-          $('#result').html(json.result);
+          $('#bus1').html(json.bus1);
+          $('#start1').html(json.start1);
+          $('#end1').html(json.end1);
         }
       });
-    });*/
+    });
   });
 </script>
 <style>
@@ -60,7 +62,7 @@ body,h1,h2,h3,h4,h5,h6 {font-family: "Raleway", Arial, Helvetica, sans-serif}
 
     <!-- Tabs -->
     <div id="Flight" class="w3-container w3-white w3-padding-16 myLink">
-      <h3>Travel the world with us</h3>
+      <!-- <h3>Travel the world with us</h3>
       <div class="w3-row-padding" style="margin:0 -16px;">
         <div class="w3-half">
           <label>From</label>
@@ -71,7 +73,7 @@ body,h1,h2,h3,h4,h5,h6 {font-family: "Raleway", Arial, Helvetica, sans-serif}
           <input class="w3-input w3-border" type="text" placeholder="Arriving at">
         </div>
       </div>
-      <p><button class="w3-btn w3-dark-grey">Search and find dates</button></p>
+      <p><button class="w3-btn w3-dark-grey">Search and find dates</button></p> -->
       <div>
         <label>Number 1:</label> <input type="text" id="n1" />
       </div><div>
@@ -79,14 +81,23 @@ body,h1,h2,h3,h4,h5,h6 {font-family: "Raleway", Arial, Helvetica, sans-serif}
       </div><div>
         <label>Result:</label> <span id="result">&nbsp;</span>
       </div><div>
+        <label>Bus 1:</label> <span id="bus1">&nbsp;</span>
+      </div><div>
+        <label>Start 1:</label> <span id="start1">&nbsp;</span>
+      </div><div>
+        <label>End 1:</label> <span id="end1">&nbsp;</span>
+      </div>
 
       <label>Test Data</label>
       <input class="w3-input w3-border" type="text" id="testdata" placeholder="Test data">
       <p>
           <button class="w3-btn w3-dark-grey" onclick="testAPI('POST');">POST</button>
           <button class="w3-btn w3-dark-grey" id="getclick" onclick="testAPI('GET');">GET</button>
-          <!-- <button class="w3-btn w3-dark-grey" onclick="testAPI('PUT');">PUT</button>
-          <button class="w3-btn w3-dark-grey" onclick="testAPI('DELETE');">DELETE</button> -->
+
+          <input type="hidden" id="bus1" value="60">
+          <input type="hidden" id="start1" value="60824">
+          <input type="hidden" id="end1" value="65396">
+          <button class="w3-btn w3-dark-grey" id="route1">Route1</button>
       </p>
     </div>
 
