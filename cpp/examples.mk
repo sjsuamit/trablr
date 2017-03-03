@@ -1,4 +1,4 @@
-SOURCES = $(PROG).cpp mongoose.c
+SOURCES = $(PROG).cpp mongoose.c ExternalApi.cpp
 INC = -I${HOME}/curl/include/
 INC += -I${HOME}/rapidjson/include/
 CFLAGS = -g -W -Wall -Werror $(INC) -Wno-unused-function $(CFLAGS_EXTRA) $(MODULE_CFLAGS)

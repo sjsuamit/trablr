@@ -10,32 +10,39 @@
 <script src="../js/main.js"></script>
 <script src="http://code.jquery.com/jquery-1.11.0.min.js"></script>
 <script language="javascript" type="text/javascript">
-  jQuery(function() {
-    $(document).on('keyup', '#n1, #n2', function() {
-      $.ajax({
-        url: 'http://127.0.0.1:8000/api/v1/sum',
-        method: 'POST',
-        dataType: 'json',
-        data: { n1: $('#n1').val(), n2: $('#n2').val() },
-        success: function(json) {
-          $('#result').html(json.result);
+    jQuery(function() {
+        var timeoutId = null;
+        jQuery('#exit').hide();
+        var get_stop_monitoring = function () {
+            $.ajax({
+                url: 'http://127.0.0.1:8000/api/v1/get_stop_monitoring',
+                method: 'POST',
+                dataType: 'json',
+                data: { line_id: $('#line_id').val(), 
+                        stop_id_start: $('#stop_id_start').val(), 
+                        stop_id_end: $('#stop_id_end').val() 
+                },
+                success: function(json) {
+                    $('#line_id_result').html(json.line_id_result);
+                    $('#stop_id_start_result').html(json.stop_id_start_result);
+                    $('#stop_id_end_result').html(json.stop_id_end_result);
+                },
+                complete: function() {
+                    jQuery('#get_stop_monitoring').hide();
+                    jQuery('#exit').show();
+                    // timeoutId = setTimeout(get_stop_monitoring, 5000);
+                }
+            });
         }
-      });
-    });
-     $(document).on('click', '#route1', function() {
-      $.ajax({
-        url: 'http://127.0.0.1:8000/api/v1/route',
-        method: 'POST',
-        dataType: 'json',
-        data: { bus1: $('#bus1').val(), start1: $('#start1').val(), end1: $('#end1').val() },
-        success: function(json) {
-          $('#bus1').html(json.bus1);
-          $('#start1').html(json.start1);
-          $('#end1').html(json.end1);
+        $(document).on('click', '#get_stop_monitoring', get_stop_monitoring);
+
+        var exit = function () {
+            clearTimeout(timeoutId);
+            jQuery('#exit').hide();
+            jQuery('#get_stop_monitoring').show();
         }
-      });
+        $(document).on('click', '#exit', exit);
     });
-  });
 </script>
 <style>
 body,h1,h2,h3,h4,h5,h6 {font-family: "Raleway", Arial, Helvetica, sans-serif}
@@ -74,30 +81,28 @@ body,h1,h2,h3,h4,h5,h6 {font-family: "Raleway", Arial, Helvetica, sans-serif}
         </div>
       </div>
       <p><button class="w3-btn w3-dark-grey">Search and find dates</button></p> -->
+      <label>Test Data</label>
       <div>
-        <label>Number 1:</label> <input type="text" id="n1" />
+        <label>Line ID:</label> <input type="text" id="line_id" value="60">
       </div><div>
-        <label>Number 2:</label> <input type="text" id="n2" />
+        <label>Stop ID (START):</label> <input type="text" id="stop_id_start" value="60824">
+      </div><div>
+        <label>Stop ID (END):</label> <input type="text" id="stop_id_end" value="65396">
       </div><div>
         <label>Result:</label> <span id="result">&nbsp;</span>
       </div><div>
-        <label>Bus 1:</label> <span id="bus1">&nbsp;</span>
+        <label>Line ID:</label> <span id="line_id_result">&nbsp;</span>
       </div><div>
-        <label>Start 1:</label> <span id="start1">&nbsp;</span>
+        <label>Stop ID (START):</label> <span id="stop_id_start_result">&nbsp;</span>
       </div><div>
-        <label>End 1:</label> <span id="end1">&nbsp;</span>
+        <label>Stop ID (END):</label> <span id="stop_id_end_result">&nbsp;</span>
       </div>
 
-      <label>Test Data</label>
-      <input class="w3-input w3-border" type="text" id="testdata" placeholder="Test data">
       <p>
-          <button class="w3-btn w3-dark-grey" onclick="testAPI('POST');">POST</button>
-          <button class="w3-btn w3-dark-grey" id="getclick" onclick="testAPI('GET');">GET</button>
-
-          <input type="hidden" id="bus1" value="60">
-          <input type="hidden" id="start1" value="60824">
-          <input type="hidden" id="end1" value="65396">
-          <button class="w3-btn w3-dark-grey" id="route1">Route1</button>
+        <button class="w3-btn w3-dark-grey" id="get_stop_monitoring">GET STOP MONITORING</button>
+        <button class="w3-btn w3-dark-grey" id="exit">EXIT</button>
+        <!-- <button class="w3-btn w3-dark-grey" onclick="testAPI('POST');">POST</button>
+        <button class="w3-btn w3-dark-grey" id="getclick" onclick="testAPI('GET');">GET</button> -->
       </p>
     </div>
 

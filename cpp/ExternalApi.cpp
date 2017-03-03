@@ -1,32 +1,16 @@
-#include <iostream>
-#include <string>
-#include <stdio.h>
-#include <curl/curl.h>
-#include <curl/easy.h>
-#include "mongoose.h"
-#include "rapidjson/prettywriter.h"
-#include "rapidjson/document.h"
-
-using namespace std;
+#include "common.h"
 using namespace rapidjson;
 
-static const char *s_http_port = "8000";
-static struct mg_serve_http_opts s_http_server_opts;
-static int s_sig_num = 0;
-static const struct mg_str s_post_method = MG_MK_STR("POST");
-static const struct mg_str s_get_method = MG_MK_STR("GET");
-static const struct mg_str s_put_method = MG_MK_STR("PUT");
-static const struct mg_str s_delete_method = MG_MK_STR("DELETE");
+string API_RESPONSE_JSON;
 
-static const string host_name = "http://api.511.org";
-static const string api_key = "876be52b-5ed7-46bf-bfe9-43443887b34a";
-static const string format = "JSON";
-static string API_RESPONSE_JSON;
+Trablr::Trablr(void) :
+    host_name("http://api.511.org"),
+    // api_key("876be52b-5ed7-46bf-bfe9-43443887b34a"),
+    api_key("df8fb6d5-d994-4579-9537-84018bcb12e4"),
+    format("JSON")
+{ printf("Creating Trablr\n"); }
 
-// static size_t writeCallback(void *contents, size_t size, size_t nmemb, void *userp) {
-//     ((std::string*)userp)->append((char*)contents, size * nmemb);
-//     return size * nmemb;
-// }
+Trablr::~Trablr(void) { printf("Destroying Trablr\n"); }
 
 static size_t writeCallback(char* buff, size_t size, size_t nmemb) {
     for (size_t c = 0; c < size*nmemb; c++) {
@@ -36,7 +20,7 @@ static size_t writeCallback(char* buff, size_t size, size_t nmemb) {
     return size*nmemb;
 }
 
-static void performCurl(string ApiUrl) {
+void Trablr::performCurl(string ApiUrl) {
     CURL *curl;
     CURLcode res;
 
@@ -56,11 +40,12 @@ static void performCurl(string ApiUrl) {
     }
 }
 
-static void get511ApiTransitOperators(struct mg_connection *nc) {
+void Trablr::get511ApiTransitOperators(struct mg_connection *nc) {
     string api_prefix = "/transit/operators";
     string API_REQUEST_URL = host_name + api_prefix
                             + "?api_key=" + api_key
                             + "&format=" + format;
+    cout << API_REQUEST_URL << endl;
 
     API_RESPONSE_JSON.clear();
     performCurl(API_REQUEST_URL);
@@ -86,13 +71,14 @@ static void get511ApiTransitOperators(struct mg_connection *nc) {
     mg_send_http_chunk(nc, "", 0);
 }
 
-static void get511ApiTransitLines(struct mg_connection *nc) {
+void Trablr::get511ApiTransitLines(struct mg_connection *nc) {
     string api_prefix = "/transit/lines";
     string operator_id = "VTA";
     string API_REQUEST_URL = host_name + api_prefix
                             + "?api_key=" + api_key
                             + "&operator_id=" + operator_id
                             + "&format=" + format;
+    cout << API_REQUEST_URL << endl;
 
     API_RESPONSE_JSON.clear();
     performCurl(API_REQUEST_URL);
@@ -117,13 +103,14 @@ static void get511ApiTransitLines(struct mg_connection *nc) {
     mg_send_http_chunk(nc, "", 0);
 }
 
-static void get511ApiTransitStops(struct mg_connection *nc) {
+void Trablr::get511ApiTransitStops(struct mg_connection *nc) {
     string api_prefix = "/transit/stops";
     string operator_id = "VTA";
     string API_REQUEST_URL = host_name + api_prefix
                             + "?api_key=" + api_key
                             + "&operator_id=" + operator_id
                             + "&format=" + format;
+    cout << API_REQUEST_URL << endl;
 
     API_RESPONSE_JSON.clear();
     performCurl(API_REQUEST_URL);
@@ -153,7 +140,7 @@ static void get511ApiTransitStops(struct mg_connection *nc) {
     mg_send_http_chunk(nc, "", 0);
 }
 
-static void get511ApiTransitStopPlaces(struct mg_connection *nc) {
+void Trablr::get511ApiTransitStopPlaces(struct mg_connection *nc) {
     string api_prefix = "/transit/stopPlaces";
     string operator_id = "VTA";
     string stop_id = "60824";
@@ -162,6 +149,7 @@ static void get511ApiTransitStopPlaces(struct mg_connection *nc) {
                             + "&operator_id=" + operator_id
                             + "&stop_id=" + stop_id
                             + "&format=" + format;
+    cout << API_REQUEST_URL << endl;
 
     API_RESPONSE_JSON.clear();
     performCurl(API_REQUEST_URL);
@@ -195,16 +183,20 @@ static void get511ApiTransitStopPlaces(struct mg_connection *nc) {
     mg_send_http_chunk(nc, "", 0);
 }
 
-static void get511ApiTransitStopMonitoring(struct mg_connection *nc) {
+void Trablr::get511ApiTransitStopMonitoring(struct mg_connection *nc, struct http_message *hm) {
+    char line_id[10], stopCode[10], stop_id_end[10];
+    mg_get_http_var(&hm->body, "line_id", line_id, sizeof(line_id));
+    mg_get_http_var(&hm->body, "stop_id_start", stopCode, sizeof(stopCode));
+    mg_get_http_var(&hm->body, "stop_id_end", stop_id_end, sizeof(stop_id_end));
     string api_prefix = "/transit/StopMonitoring";
     string agency = "VTA";
-    string stopCode = "60824";
-    // string stopCode = "62744";
+    // string stopCode = "60824";
     string API_REQUEST_URL = host_name + api_prefix
                             + "?api_key=" + api_key
                             + "&agency=" + agency
                             + "&stopCode=" + stopCode
                             + "&format=" + format;
+    cout << API_REQUEST_URL << endl;
 
     API_RESPONSE_JSON.clear();
     performCurl(API_REQUEST_URL);
@@ -219,32 +211,56 @@ static void get511ApiTransitStopMonitoring(struct mg_connection *nc) {
     assert(document["ServiceDelivery"]["StopMonitoringDelivery"].HasMember("MonitoredStopVisit"));
     const Value& stopVisit = document["ServiceDelivery"]["StopMonitoringDelivery"]["MonitoredStopVisit"];
     assert(stopVisit.IsArray());
-    for (SizeType i = 0; i < stopVisit.Size(); i++) {
-        assert(stopVisit[SizeType(i)].IsObject());
-        const Value& temp = stopVisit[SizeType(i)];
-        StringBuffer buffer;
-        Writer<StringBuffer> writer(buffer);
-        temp.Accept(writer);
-        cout << buffer.GetString() << endl;
+    vector<string> AimedArrivalTimeVector;
+    if (stopVisit.Size() > 0) {
+        string prev, next;
+        for (SizeType i = 0; i < stopVisit.Size(); i++) {
+            assert(stopVisit[SizeType(i)].IsObject());
+            assert(stopVisit[SizeType(i)].HasMember("MonitoredVehicleJourney"));
+            assert(stopVisit[SizeType(i)]["MonitoredVehicleJourney"].HasMember("LineRef"));
+            if (strcmp(line_id, stopVisit[SizeType(i)]["MonitoredVehicleJourney"]["LineRef"].GetString()) == 0) {
+                assert(stopVisit[SizeType(i)]["MonitoredVehicleJourney"]["MonitoredCall"].HasMember("AimedArrivalTime"));
+                next = stopVisit[SizeType(i)]["MonitoredVehicleJourney"]["MonitoredCall"]["AimedArrivalTime"].GetString();
+                if (prev.compare(next) != 0) {
+                    prev = next;
+                    AimedArrivalTimeVector.push_back(next);
+                    // printf("%s\n", next.c_str());
+                }
+            }
+        }
+    } else {
+        printf("Error: ServiceDelivery.StopMonitoringDelivery.MonitoredStopVisit[] is empty\n");
     }
 
+    string json_result = "{";
+    for (uint i = 0; i < AimedArrivalTimeVector.size(); i++) {
+        std::cout << AimedArrivalTimeVector[i] << '\n';
+        json_result = json_result + "AimedArrivalTime_" + to_string(i) + "\":\"" + AimedArrivalTimeVector[i] + "\",";
+    }
+    json_result = json_result + "}";
+    cout << json_result << '\n';
+
+    printf("line_id=%s stop_id_start=%s stop_id_end=%s\n", line_id, stopCode, stop_id_end);
     /* Compute the result and send it back as a JSON object */
     mg_printf(nc, "%s", "HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n");
-    mg_printf_http_chunk(nc, "{ \"result\": %d }", 99);
+    mg_printf_http_chunk(nc, "{ \"line_id_result\": %d, \"stop_id_start_result\": %d, \"stop_id_end_result\": %d }", atoi(line_id), atoi(stopCode), atoi(stop_id_end));
     mg_send_http_chunk(nc, "", 0);
 }
 
-static void get511ApiTransitVehicleMonitoring(struct mg_connection *nc) {
+void Trablr::get511ApiTransitVehicleMonitoring(struct mg_connection *nc, struct http_message *hm) {
+    char line_id[10], vehicleID[10], stop_id_end[10];
+    mg_get_http_var(&hm->body, "line_id", line_id, sizeof(line_id));
+    mg_get_http_var(&hm->body, "stop_id_start", vehicleID, sizeof(vehicleID));
+    mg_get_http_var(&hm->body, "stop_id_end", stop_id_end, sizeof(stop_id_end));
     string api_prefix = "/transit/VehicleMonitoring";
     string agency = "VTA";
-    string vehicleID = "60824";
-    // string vehicleID = "62744";
-    // string vehicleID = "60519";
+    // string vehicleID = "60824";
     string API_REQUEST_URL = host_name + api_prefix
                             + "?api_key=" + api_key
                             + "&agency=" + agency
-                            // + "&vehicleID=" + vehicleID
+                            + "&vehicleID=" + vehicleID
                             + "&format=" + format;
+    cout << API_REQUEST_URL << endl;
 
     API_RESPONSE_JSON.clear();
     performCurl(API_REQUEST_URL);
@@ -275,22 +291,21 @@ static void get511ApiTransitVehicleMonitoring(struct mg_connection *nc) {
     mg_send_http_chunk(nc, "", 0);
 }
 
-static void get511ApiTransitTimetable(struct mg_connection *nc, struct http_message *hm) {
+void Trablr::get511ApiTransitTimetable(struct mg_connection *nc, struct http_message *hm) {
+    char line_id[10], stop_id_start[10], stop_id_end[10];
+    mg_get_http_var(&hm->body, "line_id", line_id, sizeof(line_id));
+    mg_get_http_var(&hm->body, "stop_id_start", stop_id_start, sizeof(stop_id_start));
+    mg_get_http_var(&hm->body, "stop_id_end", stop_id_end, sizeof(stop_id_end));
     string api_prefix = "/transit/timetable";
     string operator_id = "VTA";
-    string line_id = "60";
+    // string line_id = "60";
     string API_REQUEST_URL = host_name + api_prefix
                             + "?api_key=" + api_key
                             + "&operator_id=" + operator_id
                             + "&line_id=" + line_id
                             + "&format=" + format;
-
-    /* Get form variables */
-    char bus1[100], start1[100], end1[100];
-    mg_get_http_var(&hm->body, "bus1", bus1, sizeof(bus1));
-    mg_get_http_var(&hm->body, "start1", start1, sizeof(start1));
-    mg_get_http_var(&hm->body, "end1", end1, sizeof(end1));
-
+    cout << API_REQUEST_URL << endl;
+    
     API_RESPONSE_JSON.clear();
     performCurl(API_REQUEST_URL);
 
@@ -309,146 +324,38 @@ static void get511ApiTransitTimetable(struct mg_connection *nc, struct http_mess
         StringBuffer buffer;
         Writer<StringBuffer> writer(buffer);
         temp.Accept(writer);
-        cout << buffer.GetString() << endl;
+        // cout << buffer.GetString() << endl;
     }
 
+    printf("line_id=%s stop_id_start=%s stop_id_end=%s\n", line_id, stop_id_start, stop_id_end);
     /* Compute the result and send it back as a JSON object */
     mg_printf(nc, "%s", "HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n");
-    mg_printf_http_chunk(nc, "{ \"result\": %d }", 99);
+    mg_printf_http_chunk(nc, "{ \"line_id_result\": %d, \"stop_id_start_result\": %d, \"stop_id_end_result\": %d }", atoi(line_id), atoi(stop_id_start), atoi(stop_id_end));
     mg_send_http_chunk(nc, "", 0);
 }
 
-static void loopTest(struct mg_connection *nc) {
-    int x = 98;
-    while (x < 110)
-    {
-        x++;
-        sleep(2);
-        mg_printf(nc, "%s", "HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n");
-        mg_printf_http_chunk(nc, "{ \"result\": %d }", x);
-        mg_send_http_chunk(nc, "", 0);
-    }
-}
-
-static void handle_sum_call(struct mg_connection *nc, struct http_message *hm) {
-    char n1[100], n2[100];
-    double result;
-
-    /* Get form variables */
-    mg_get_http_var(&hm->body, "n1", n1, sizeof(n1));
-    mg_get_http_var(&hm->body, "n2", n2, sizeof(n2));
-
-    printf("n1=%s n2=%s\n", n1, n2);
-
-    /* Send headers */
+void Trablr::loopTest(struct mg_connection *nc) {
+    uint x = mg_time();
     mg_printf(nc, "%s", "HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n");
-
-    /* Compute the result and send it back as a JSON object */
-    result = strtod(n1, NULL) + strtod(n2, NULL);
-    mg_printf_http_chunk(nc, "{ \"result\": %lf }", result);
-    mg_send_http_chunk(nc, "", 0); /* Send empty chunk, the end of response */
+    mg_printf_http_chunk(nc, "{ \"line_id_result\": %d, \"stop_id_start_result\": %d, \"stop_id_end_result\": %d }", x, x, x);
+    mg_send_http_chunk(nc, "", 0);
 }
 
-static void signal_handler(int sig_num) {
-    signal(sig_num, signal_handler);
-    s_sig_num = sig_num;
-}
+// void Trablr::handle_sum_call(struct mg_connection *nc, struct http_message *hm) {
+//     char n1[100], n2[100];
+//     double result;
 
-static int has_prefix(const struct mg_str *uri, const struct mg_str *prefix) {
-    return uri->len > prefix->len && memcmp(uri->p, prefix->p, prefix->len) == 0;
-}
+//     /* Get form variables */
+//     mg_get_http_var(&hm->body, "n1", n1, sizeof(n1));
+//     mg_get_http_var(&hm->body, "n2", n2, sizeof(n2));
 
-static int is_equal(const struct mg_str *s1, const struct mg_str *s2) {
-    return s1->len == s2->len && memcmp(s1->p, s2->p, s2->len) == 0;
-}
+//     printf("n1=%s n2=%s\n", n1, n2);
 
-static void ev_handler(struct mg_connection *nc, int ev, void *ev_data) {
-    static const struct mg_str api_prefix = MG_MK_STR("/api/v1");
-    struct http_message *hm = (struct http_message *) ev_data;
-    // struct mg_str key;
+//     /* Send headers */
+//     mg_printf(nc, "%s", "HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n");
 
-    switch (ev) {
-        case MG_EV_HTTP_REQUEST:
-            if (has_prefix(&hm->uri, &api_prefix)) {
-                // key.p = hm->uri.p + api_prefix.len;
-                // key.len = hm->uri.len - api_prefix.len;
-                if (mg_vcmp(&hm->uri, "/api/v1/route") == 0) {
-                    get511ApiTransitTimetable(nc, hm);
-                    cout << (string*)&hm->uri << endl;
-                    // printf("%s\n", &hm->uri);
-                }
-                else if (is_equal(&hm->method, &s_get_method)) {
-                    // get511ApiTransitLines(nc);
-                    // get511ApiTransitStops(nc);
-                    get511ApiTransitVehicleMonitoring(nc);
-                    mg_printf(nc, "%s", "get_method\r\n");
-                    printf("get_method\n");
-                } 
-                // else if (is_equal(&hm->method, &s_put_method)) {
-                //     // db_op(nc, hm, &key, s_db_handle, API_OP_SET);
-                //     mg_printf(nc, "%s", "put_method\r\n");
-                //     printf("put_method\n");
-                // } 
-                // else if (is_equal(&hm->method, &s_delete_method)) {
-                //     // db_op(nc, hm, &key, s_db_handle, API_OP_DEL);
-                //     mg_printf(nc, "%s", "delete_method\r\n");
-                //     printf("delete_method\n");
-                // }
-                else if (is_equal(&hm->method, &s_post_method)) {
-                    // get511ApiTransitOperators(nc);
-                    // get511ApiTransitStopPlaces(nc);
-                    get511ApiTransitStopMonitoring(nc);
-                    // get511ApiTransitTimetable(nc);
-                    // loopTest(nc);
-                    mg_printf(nc, "%s", "post_method\r\n");
-                    printf("post_method\n");
-                } else {
-                    mg_printf(nc, "%s",
-                    "HTTP/1.0 501 Not Implemented\r\n"
-                    "Content-Length: 0\r\n\r\n");
-                    printf("HTTP/1.0 501 Not Implemented\n");
-                }
-            } else {
-                mg_serve_http(nc, hm, s_http_server_opts); /* Serve static content */
-                printf("Serve static content\n");
-            }
-            break;
-        default:
-            break;
-    }
-}
-
-int main(int argc, char *argv[]) {
-    struct mg_mgr mgr;
-    struct mg_connection *nc;
-    int i;
-
-    /* Open listening socket */
-    mg_mgr_init(&mgr, NULL);
-    nc = mg_bind(&mgr, s_http_port, ev_handler);
-    mg_set_protocol_http_websocket(nc);
-    s_http_server_opts.document_root = "/var/www/html";
-
-    /* Parse command line arguments */
-    for (i = 1; i < argc; i++) {
-        if (strcmp(argv[i], "-r") == 0) {
-            s_http_server_opts.document_root = argv[++i];
-        }
-    }
-
-    signal(SIGINT, signal_handler);
-    signal(SIGTERM, signal_handler);
-
-    /* Run event loop until signal is received */
-    printf("Starting RESTful server on port %s\n", s_http_port);
-    while (s_sig_num == 0) {
-        mg_mgr_poll(&mgr, 1000);
-    }
-
-    /* Cleanup */
-    mg_mgr_free(&mgr);
-
-    printf("Exiting on signal %d\n", s_sig_num);
-
-    return 0;
-}
+//     /* Compute the result and send it back as a JSON object */
+//     result = strtod(n1, NULL) + strtod(n2, NULL);
+//     mg_printf_http_chunk(nc, "{ \"result\": %lf }", result);
+//     mg_send_http_chunk(nc, "", 0); /* Send empty chunk, the end of response */
+// }

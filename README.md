@@ -8,6 +8,7 @@ git clone git@github.com:cesanta/mongoose.git
 
 curl (https://curl.haxx.se)
 git clone git@github.com:curl/curl.git
+sudo apt-get install -y autoconf libtool
 Install via instructions in GIT-INFO file
 
 rapidjson (http://rapidjson.org)
